@@ -3,6 +3,7 @@ import folium
 from streamlit_folium import st_folium
 import requests
 from datetime import date
+import tempfile
 
 # Configuración de la app
 st.set_page_config(page_title="Visor NDVI Sentinel-2", layout="wide")
@@ -94,16 +95,23 @@ if visualizar:
     if token:
         imagen = solicitar_ndvi(fecha, token)
         if imagen:
+            # Convertir imagen binaria a archivo temporal
+            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_file:
+                tmp_file.write(imagen)
+                tmp_file.flush()
+                temp_image_path = tmp_file.name
+
+            # Crear mapa centrado
             center_lat = (bbox[1] + bbox[3]) / 2
             center_lon = (bbox[0] + bbox[2]) / 2
             m = folium.Map(location=[center_lat, center_lon], zoom_start=16)
 
             folium.raster_layers.ImageOverlay(
-                image=imagen,
+                name="NDVI",
+                image=temp_image_path,
                 bounds=[[bbox[1], bbox[0]], [bbox[3], bbox[2]]],
-                opacity=0.6,
-                interactive=True,
-                cross_origin=False
+                opacity=0.6
             ).add_to(m)
 
+            folium.LayerControl().add_to(m)
             st_folium(m, width=700, height=500)
